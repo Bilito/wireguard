@@ -77,7 +77,7 @@ echo "✅ ¡WireGuard está listo! Accede a la interfaz web !"
 
 # 1. Crear carpetas necesarias
 mkdir -p ./adguard
-cd ~/adguard
+cd ./adguard
 mkdir config && mkdir workingdir || exit
 
 # 2. Crear docker-compose.yml
