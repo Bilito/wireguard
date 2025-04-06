@@ -4,7 +4,7 @@
 
 cd ./adguard
 sudo docker-compose down
-cd
+cd ..
 sleep 3
 sudo rm -rf ./adguard
 
@@ -13,6 +13,6 @@ cd
 sleep 3
 cd ./wireguard-docker
 sudo docker-compose down
-cd
+cd ..
 sleep 3
 sudo rm -rf ./wireguard-docker
