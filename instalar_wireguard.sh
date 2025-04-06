@@ -57,7 +57,7 @@ services:
       - "51820:51820/udp"
       - "51821:51821/tcp"  # Interfaz web
     volumes:
-      - ./wireguard-docker:/etc/wireguard
+      - ./:/etc/wireguard
     cap_add:
       - NET_ADMIN
       - SYS_MODULE
@@ -91,8 +91,8 @@ services:
         environment:
             - TZ=Europe/Madrid
         volumes:
-            - ./adguard/config:/opt/adguardhome/conf
-            - ./adguard/workingdir:/opt/adguardhome/work
+            - ./config:/opt/adguardhome/conf
+            - ./workingdir:/opt/adguardhome/work
         network_mode: host
         restart: always
         image: adguard/adguardhome
