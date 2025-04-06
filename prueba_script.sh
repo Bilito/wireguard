@@ -41,6 +41,9 @@ services:
             - adguard_network
         restart: always
         image: adguard/adguardhome
+  networks:
+    adguard_network:
+      driver: host
 EOF
 
 # 8. Ejecutar docker-compose ya con la config lista
@@ -99,6 +102,9 @@ services:
     sysctls:
       - net.ipv4.ip_forward=1
       - net.ipv4.conf.all.src_valid_mark=1
+  networks:
+    adguard_netwrk:
+      driver: brigde
 EOF
 
 
