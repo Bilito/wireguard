@@ -20,7 +20,7 @@ sudo docker network create adguard_network
 # Instalación Adguard
 
 # 1. Crear carpetas necesarias
-cd
+
 mkdir ./adguard
 cd ./adguard
 mkdir config && mkdir workingdir || exit
@@ -50,6 +50,7 @@ sudo docker-compose up -d
 echo "✅ ¡Adguard está listo! Accede a la interfaz web"
 # 1. Crear carpetas necesarias
 
+cd ..
 mkdir -p ./wireguard-docker
 cd ./wireguard-docker || exit
 
