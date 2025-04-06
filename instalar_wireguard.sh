@@ -69,7 +69,7 @@ EOF
 
 # 8. Ejecutar docker-compose ya con la config lista
 echo "Levantando el contenedor con la configuración final..."
-docker-compose up -d
+sudo docker-compose up -d
 
 echo "✅ ¡WireGuard está listo! Accede a la interfaz web !"
 
@@ -100,6 +100,6 @@ EOF
 
 # 8. Ejecutar docker-compose ya con la config lista
 echo "Levantando el contenedor con la configuración final..."
-docker-compose up -d
+sudo docker-compose up -d
 
 echo "✅ ¡Adguard está listo! Accede a la interfaz web"
