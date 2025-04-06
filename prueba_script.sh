@@ -15,6 +15,8 @@ if ! command -v docker-compose &> /dev/null; then
   sudo apt install -y docker-compose || { echo "Error al instalar docker-compose"; exit 1; }
 fi
 
+sudo docker network create adguard_network
+
 # Instalación Adguard
 
 # 1. Crear carpetas necesarias
