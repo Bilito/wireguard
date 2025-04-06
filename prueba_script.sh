@@ -35,7 +35,8 @@ services:
         volumes:
             - ./config:/opt/adguardhome/conf
             - ./workingdir:/opt/adguardhome/work
-        network_mode: host
+        networks:
+            - adguard_network
         restart: always
         image: adguard/adguardhome
 EOF
@@ -80,7 +81,8 @@ services:
     image: ghcr.io/wg-easy/wg-easy
     container_name: wg-easy
     restart: unless-stopped
-    network_mode: host
+    networks:
+      - adguard_network
     environment:
       - PASSWORD_HASH=${ESCAPED_HASH}
       - WG_HOST=${WG_HOST}
