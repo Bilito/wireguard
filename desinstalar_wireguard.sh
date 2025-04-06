@@ -5,6 +5,7 @@
 cd ./adguard
 sudo docker-compose down
 cd
+sleep 3
 sudo rm -R ./adguard 
 
 # Navegamos hasta la carpeta wireguard,  paramos el contenedor, volvemos atrás  y elimininamos la carpeta
@@ -12,5 +13,6 @@ sudo rm -R ./adguard
 cd ./wireguard-docker
 sudo docker-compose down
 cd
+sleep 3
 sudo rm -R ./wireguard-docker 
 
