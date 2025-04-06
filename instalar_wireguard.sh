@@ -77,7 +77,7 @@ echo "✅ ¡WireGuard está listo! Accede a la interfaz web !"
 
 # 1. Crear carpetas necesarias
 cd ..
-mkdir -p ./adguard
+mkdir ./adguard
 cd ./adguard
 mkdir config && mkdir workingdir || exit
 
