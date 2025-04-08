@@ -78,6 +78,10 @@ mkdir config && mkdir workingdir || exit
 echo "Creando docker-compose.yml para adguard..."
 cat <<EOF > docker-compose.yml
 
+networks:
+  vpn_net:
+    driver: bridge
+
 services:
     adguardhome:
         container_name: adguard-home
