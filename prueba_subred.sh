@@ -1,70 +1,112 @@
 #!/bin/bash
 
-# 1. Crear carpetas necesarias
+#!/bin/bash
 
-mkdir -p ./wireguard-docker
-cd ./wireguard-docker || exit
+# Comprobación de privilegios (debe ejecutarse como root o con sudo)
+if [ "$(id -u)" -ne 0 ]; then
+  echo "Este script debe ejecutarse con privilegios de root."
+  exit 1
+fi
 
-# 2.Solicitar WG_HOST justo después del paso 1
-read -rp "Introduce el dominio o IP pública para WireGuard (WG_HOST): " WG_HOST
+# Actualización de paquetes del sistema
+echo "Actualizando los paquetes del sistema..."
+apt update && apt upgrade -y
 
-# 3. Solicitar contraseña
-read -sp "Introduce la nueva contraseña para el acceso a la interfaz: " NEW_PASSWORD
-echo
+# Instalación de WireGuard y sus herramientas
+echo "Instalando WireGuard..."
+apt install -y wireguard wireguard-tools qrencode
 
-# 4. Crear hash
-PASSWORD_HASH=$(sudo docker run --rm ghcr.io/wg-easy/wg-easy wgpw $NEW_PASSWORD)
+# Generar claves para el servidor
+echo "Generando claves para el servidor..."
+wg genkey | tee /etc/wireguard/server_privatekey | wg pubkey > /etc/wireguard/server_publickey
 
-# 5. Escapar los $
-ESCAPED_HASH=$(echo "$PASSWORD_HASH" | sed 's/PASSWORD_HASH=//g' | sed 's/\$/\$\$/g' | sed "s/'//g")
-
-echo "Hash de la contraseña: $ESCAPED_HASH"
-
-# 6. Crear archivo .env con toda la configuración
-cat <<EOF > .env
-$ESCAPED_HASH
-WG_HOST=$WG_HOST
-WG_PORT=51820
+# Configuración inicial del servidor
+SERVER_CONF="/etc/wireguard/wg0.conf"
+cat <<EOF > $SERVER_CONF
+[Interface]
+PrivateKey = $(cat /etc/wireguard/server_privatekey)
+Address = 10.6.0.1/24
+ListenPort = 51820
+SaveConfig = true
 EOF
 
-# 7. Crear docker-compose.yml
-echo "Creando docker-compose.yml para wg-easy..."
-cat <<EOF > docker-compose.yml
+# Función para agregar un peer
+add_peer() {
+  # Pedir al usuario el nombre del peer
+  read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
-networks:
-  vpn_net:
-    driver: bridge
-    
-services:
-  wg-easy:
-    image: ghcr.io/wg-easy/wg-easy
-    container_name: wg-easy
-    restart: unless-stopped
-    environment:
-      - PASSWORD_HASH=${ESCAPED_HASH}
-      - WG_HOST=${WG_HOST}
-      - WG_PORT=51820
-    ports:
-      - "51820:51820/udp"
-      - "51821:51821/tcp"  # Interfaz web
-    volumes:
-      - ./:/etc/wireguard
-    cap_add:
-      - NET_ADMIN
-      - SYS_MODULE
-    sysctls:
-      - net.ipv4.ip_forward=1
-      - net.ipv4.conf.all.src_valid_mark=1
-    networks:
-      - vpn_net
-    restart: always
+  # Generar claves para el cliente
+  echo "Generando claves para el cliente '$PEER_NAME'..."
+  wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
+
+  # Crear la configuración para el cliente
+  CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}_config.conf"
+  cat <<EOF > $CLIENT_CONFIG_PATH
+[Interface]
+PrivateKey = $(cat /etc/wireguard/${PEER_NAME}_privatekey)
+Address = 10.6.0.2/32
+DNS = 127.0.0.1
+
+[Peer]
+PublicKey = $(cat /etc/wireguard/server_publickey)
+Endpoint = <IP_o_dominio_del_servidor>:51820
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25
 EOF
 
-# 8. Ejecutar docker-compose ya con la config lista
-echo "Levantando el contenedor con la configuración final..."
-sudo docker-compose up -d
+  # Agregar la configuración del peer al archivo del servidor
+  CLIENT_PUBLIC_KEY=$(cat /etc/wireguard/${PEER_NAME}_publickey)
+  echo "[Peer]" >> $SERVER_CONF
+  echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
+  echo "PublicKey = $CLIENT_PUBLIC_KEY" >> $SERVER_CONF
+  echo "AllowedIPs = 10.6.0.2/32" >> $SERVER_CONF
+  echo "" >> $SERVER_CONF
 
-echo "✅ ¡WireGuard está listo! Accede a la interfaz web !"
+  # Generar código QR de la configuración del cliente
+  echo "Generando código QR para la configuración del cliente '$PEER_NAME'..."
+  qrencode -t png -o /etc/wireguard/${PEER_NAME}_config_qr.png < $CLIENT_CONFIG_PATH
+  echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_config_qr.png"
+
+  # Instrucción al usuario
+  echo "Archivo de configuración del cliente '$PEER_NAME' guardado en: $CLIENT_CONFIG_PATH"
+  echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_config_qr.png"
+}
+
+# Función principal para gestionar múltiples peers
+while true; do
+  add_peer
+
+  # Preguntar si se desea agregar otro peer
+  read -p "¿Deseas agregar otro peer? (s/n): " ADD_MORE
+  if [[ "$ADD_MORE" != "s" && "$ADD_MORE" != "S" ]]; then
+    break
+  fi
+done
+
+# Habilitar reenvío de IP
+echo "Habilitando el reenvío de IP..."
+echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+sysctl -p
+
+# Configuración del firewall (ufw)
+echo "Configurando firewall (ufw)..."
+ufw allow 51820/udp
+ufw enable
+
+# Iniciar WireGuard
+echo "Iniciando WireGuard..."
+wg-quick up wg0
+
+# Habilitar WireGuard para que se inicie al arrancar
+echo "Habilitando WireGuard para que se inicie al arrancar..."
+systemctl enable wg-quick@wg0
+
+# Mostrar estado de la interfaz WireGuard
+echo "Estado de la interfaz WireGuard:"
+wg show
+
+echo "WireGuard instalado y configurado correctamente."
+echo "Recuerda compartir la configuración del cliente con los dispositivos que quieras conectar."
 
 # Instalación Adguard
 
