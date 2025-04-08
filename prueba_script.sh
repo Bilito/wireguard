@@ -116,7 +116,7 @@ echo "Recuerda compartir la configuración del cliente con los dispositivos que 
 # Instalación Adguard
 
 # 1. Crear carpetas necesarias
-cd
+
 mkdir ./adguard
 cd ./adguard
 mkdir config && mkdir workingdir || exit
