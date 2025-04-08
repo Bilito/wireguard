@@ -83,6 +83,10 @@ services:
         container_name: adguard-home
         environment:
             - TZ=Europe/Madrid
+        ports:
+            - "3000:3000"     # Interfaz web
+            - "53:53/tcp"     # DNS TCP
+            - "53:53/udp"     # DNS UDP
         volumes:
             - ./config:/opt/adguardhome/conf
             - ./workingdir:/opt/adguardhome/work
