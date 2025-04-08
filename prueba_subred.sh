@@ -1,12 +1,13 @@
 #!/bin/bash
 
-#!/bin/bash
+
 
 # Comprobación de privilegios (debe ejecutarse como root o con sudo)
 if [ "$(id -u)" -ne 0 ]; then
   echo "Este script debe ejecutarse con privilegios de root."
   exit 1
 fi
+read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
 
 # Actualización de paquetes del sistema
 echo "Actualizando los paquetes del sistema..."
@@ -49,7 +50,7 @@ DNS = 127.0.0.1
 
 [Peer]
 PublicKey = $(cat /etc/wireguard/server_publickey)
-Endpoint = <IP_o_dominio_del_servidor>:51820
+Endpoint = $ENDPOINT:51820
 AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
@@ -67,6 +68,10 @@ EOF
   qrencode -t png -o /etc/wireguard/${PEER_NAME}_config_qr.png < $CLIENT_CONFIG_PATH
   echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_config_qr.png"
 
+  # Mostrar código QR por terminal
+  echo "Código QR para '$PEER_NAME':"
+  qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
+  
   # Instrucción al usuario
   echo "Archivo de configuración del cliente '$PEER_NAME' guardado en: $CLIENT_CONFIG_PATH"
   echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_config_qr.png"
