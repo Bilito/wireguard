@@ -1,0 +1,39 @@
+version: "3.8"
+
+networks:
+  vpn_net:
+    driver: bridge
+
+services:
+  wg-easy:
+    image: ghcr.io/wg-easy/wg-easy
+    container_name: wg-easy
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      - WG_HOST=TU.IP.PUBLICA
+    ports:
+      - "51820:51820/udp"
+      - "51821:51821/tcp"
+    volumes:
+      - ./config:/etc/wireguard
+      - ./custom-entrypoint.sh:/custom-entrypoint.sh
+    entrypoint: ["/bin/sh", "/custom-entrypoint.sh"]
+    networks:
+      - vpn_net
+    restart: always
+
+  adguard:
+    image: adguard/adguardhome
+    container_name: adguard
+    volumes:
+      - ./adguard/work:/opt/adguardhome/work
+      - ./adguard/conf:/opt/adguardhome/conf
+    ports:
+      - "3000:3000"     # Interfaz web
+      - "53:53/tcp"
+      - "53:53/udp"
+    networks:
+      - vpn_net
+    restart: always
