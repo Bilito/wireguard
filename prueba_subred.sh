@@ -125,25 +125,17 @@ mkdir config && mkdir workingdir || exit
 echo "Creando docker-compose.yml para adguard..."
 cat <<EOF > docker-compose.yml
 
-networks:
-  vpn_net:
-    driver: bridge
 
 services:
     adguardhome:
         container_name: adguard-home
         environment:
             - TZ=Europe/Madrid
-        ports:
-            - "3000:3000"     # Interfaz web
-            - "53:53/tcp"     # DNS TCP
-            - "53:53/udp"     # DNS UDP
         volumes:
             - ./config:/opt/adguardhome/conf
             - ./workingdir:/opt/adguardhome/work
         restart: always
-        networks:
-            - vpn_net
+        network_mode: host
         image: adguard/adguardhome
 EOF
 
