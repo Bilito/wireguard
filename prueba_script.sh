@@ -7,6 +7,39 @@ if [ "$(id -u)" -ne 0 ]; then
   echo "Este script debe ejecutarse con privilegios de root."
   exit 1
 fi
+
+# Instalación Adguard
+
+# 1. Crear carpetas necesarias
+
+mkdir ./adguard
+cd ./adguard
+mkdir config && mkdir workingdir || exit
+
+# 2. Crear docker-compose.yml
+echo "Creando docker-compose.yml para adguard..."
+cat <<EOF > docker-compose.yml
+
+
+services:
+    adguardhome:
+        container_name: adguard-home
+        environment:
+            - TZ=Europe/Madrid
+        volumes:
+            - ./config:/opt/adguardhome/conf
+            - ./workingdir:/opt/adguardhome/work
+        restart: always
+        network_mode: host
+        image: adguard/adguardhome
+EOF
+
+# 8. Ejecutar docker-compose ya con la config lista
+echo "Levantando el contenedor con la configuración final..."
+sudo docker-compose up -d
+
+echo "✅ ¡Adguard está listo! Accede a la interfaz web"
+
 read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
 
 # Actualización de paquetes del sistema
@@ -112,35 +145,3 @@ wg show
 
 echo "WireGuard instalado y configurado correctamente."
 echo "Recuerda compartir la configuración del cliente con los dispositivos que quieras conectar."
-
-# Instalación Adguard
-
-# 1. Crear carpetas necesarias
-
-mkdir ./adguard
-cd ./adguard
-mkdir config && mkdir workingdir || exit
-
-# 2. Crear docker-compose.yml
-echo "Creando docker-compose.yml para adguard..."
-cat <<EOF > docker-compose.yml
-
-
-services:
-    adguardhome:
-        container_name: adguard-home
-        environment:
-            - TZ=Europe/Madrid
-        volumes:
-            - ./config:/opt/adguardhome/conf
-            - ./workingdir:/opt/adguardhome/work
-        restart: always
-        network_mode: host
-        image: adguard/adguardhome
-EOF
-
-# 8. Ejecutar docker-compose ya con la config lista
-echo "Levantando el contenedor con la configuración final..."
-sudo docker-compose up -d
-
-echo "✅ ¡Adguard está listo! Accede a la interfaz web"
