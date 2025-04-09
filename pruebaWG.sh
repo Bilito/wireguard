@@ -60,9 +60,9 @@ services:
     environment:
       - PASSWORD_HASH=${ESCAPED_HASH}
       - WG_HOST=${WG_HOST}
-      - WG_PORT=$WG_PORT
+      - WG_PORT=51820
     ports:
-      - "$WG_PORT:$WG_PORT/udp"
+      - "51820:51820/udp"
       - "51821:51821/tcp"  # Interfaz web
     volumes:
       - ./:/etc/wireguard
@@ -75,8 +75,7 @@ services:
     networks:
       - wg_net
 
-
-adguardhome:
+  adguardhome:
     container_name: adguard-home
     image: adguard/adguardhome
     environment:
