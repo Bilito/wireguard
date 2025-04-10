@@ -76,7 +76,8 @@ cat <<EOF > $SERVER_CONF
 PrivateKey = $(cat /etc/wireguard/server_privatekey)
 Address = 10.6.0.1/24
 ListenPort = 51820
-SaveConfig = true
+PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o ens3 -j MASQUERADE
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o ens3 -j MASQUERADE
 EOF
 
 # Función para agregar un peer
