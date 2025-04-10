@@ -95,7 +95,7 @@ add_peer() {
 [Interface]
 PrivateKey = $(cat /etc/wireguard/${PEER_NAME}_privatekey)
 Address = 10.6.0.2/32
-DNS = 127.0.0.1
+DNS = 8.8.8.8
 
 [Peer]
 PublicKey = $(cat /etc/wireguard/server_publickey)
@@ -142,10 +142,6 @@ echo "Habilitando el reenvío de IP..."
 echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
 sysctl -p
 
-# Configuración del firewall (ufw)
-echo "Configurando firewall (ufw)..."
-ufw allow 51820/udp
-ufw enable
 
 # Iniciar WireGuard
 echo "Iniciando WireGuard..."
