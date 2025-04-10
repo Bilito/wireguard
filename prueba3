@@ -55,6 +55,7 @@ sudo docker-compose up -d
 
 echo "✅ ¡Adguard está listo! Accede a la interfaz web"
 
+cd ..
 
 # Wireguard
 
@@ -128,6 +129,11 @@ add_peer() {
   systemctl enable wg-quick@$WG_INTERFACE
   systemctl start wg-quick@$WG_INTERFACE
   echo "Servidor WireGuard configurado y funcionando en $WG_INTERFACE"
+
+  # Habilitar reenvío de IP
+  echo "Habilitando el reenvío de IP..."
+  echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+  sysctl -p
 
   echo "Creando archivo de configuración para $CLIENT_NAME..."
   cat > $CLIENTS_DIR/$CLIENT_NAME.conf <<EOF
