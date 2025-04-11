@@ -80,6 +80,9 @@ apt install -y wireguard qrencode
 echo "Generando claves para el servidor..."
 wg genkey | tee /etc/wireguard/server_privatekey | wg pubkey > /etc/wireguard/server_publickey
 
+#obtener la interfaz de red
+DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}')
+
 # Configuración inicial del servidor
 SERVER_CONF="/etc/wireguard/wg0.conf"
 cat <<EOF > $SERVER_CONF
@@ -87,12 +90,15 @@ cat <<EOF > $SERVER_CONF
 PrivateKey = $(cat /etc/wireguard/server_privatekey)
 Address = 10.6.0.1/24
 ListenPort = 51820
-PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o ens3 -j MASQUERADE
-PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o ens3 -j MASQUERADE
+PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 EOF
 
 # Función para agregar un peer
 add_peer() {
+
+  PEER_COUNT=$(grep -c "\[Peer\]" $SERVER_CONF)
+  
   # Pedir al usuario el nombre del peer
   read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
@@ -108,7 +114,7 @@ LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
   cat <<EOF > $CLIENT_CONFIG_PATH
 [Interface]
 PrivateKey = $(cat /etc/wireguard/${PEER_NAME}_privatekey)
-Address = 10.6.0.2/32
+Address = "10.6.0.$((PEER_COUNT + 2))/32"
 DNS = $LOCAL_IP
 
 [Peer]
@@ -180,4 +186,15 @@ echo "Estado de la interfaz WireGuard:"
 wg show
 
 echo "WireGuard instalado y configurado correctamente."
-echo "Recuerda compartir la configuración del cliente con los dispositivos que quieras conectar.
+echo "Recuerda compartir la configuración del cliente con los dispositivos que quieras conectar."
+
+# Menú principal
+case "$1" in
+  add)
+    add_peer
+    ;;
+  *)
+    echo "Uso: $0 {add}"
+    echo "  add: añade un nuevo peer y muestra el QR"
+    ;;
+esac
