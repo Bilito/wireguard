@@ -145,15 +145,3 @@ wg show
 echo "✅ WireGuard instalado y configurado correctamente."
 echo "Recuerda compartir las configuraciones y códigos QR con los dispositivos clientes."
 
-# =====================
-#  Argumento CLI para agregar peer
-# =====================
-case "$1" in
-  add)
-    add_peer
-    ;;
-  *)
-    echo "Uso: $0 {add}"
-    echo "  add: añade un nuevo peer y muestra el QR"
-    ;;
-esac
