@@ -70,7 +70,7 @@ fi
 echo "Configurando DNS para AdGuard Home..."
 
 # Crear el directorio si no existe
-sudo mkdir -p /etc/systemd/resolved.conf.d
+mkdir -p /etc/systemd/resolved.conf.d
 
 # Crear el archivo de configuración para desactivar DNSStubListener y establecer DNS a 127.0.0.1
 echo -e "[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no" | sudo tee /etc/systemd/resolved.conf.d/adguardhome.conf
@@ -111,6 +111,7 @@ PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEP
 PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 EOF
 
+# Función para agregar un peer
 add_peer() {
   PEER_COUNT=$(grep -c "\[Peer\]" $SERVER_CONF)
   read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
@@ -154,9 +155,11 @@ done
 #  Reenvío IP y activación
 # =====================
 echo "🛠️ Habilitando el reenvío de IP..."
-grep -q "^net.ipv4.ip_forward" /etc/sysctl.conf && \
-  sed -i 's/^net\.ipv4\.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf || \
+if ! grep -q "^net.ipv4.ip_forward" /etc/sysctl.conf; then
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+else
+  sed -i 's/^net\.ipv4\.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf
+fi
 sysctl -p
 
 wg-quick up wg0
