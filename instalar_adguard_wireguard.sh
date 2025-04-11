@@ -65,6 +65,29 @@ EOF
 fi
 
 # =====================
+# Configuración de DNS para AdGuard Home
+# =====================
+echo "Configurando DNS para AdGuard Home..."
+
+# Crear el directorio si no existe
+sudo mkdir -p /etc/systemd/resolved.conf.d
+
+# Crear el archivo de configuración para desactivar DNSStubListener y establecer DNS a 127.0.0.1
+echo -e "[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no" | sudo tee /etc/systemd/resolved.conf.d/adguardhome.conf
+
+# Respaldar el archivo resolv.conf existente
+sudo mv /etc/resolv.conf /etc/resolv.conf.backup
+
+# Crear un enlace simbólico para que systemd use el resolv.conf adecuado
+sudo ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
+
+# Reiniciar el servicio de systemd-resolved para aplicar los cambios
+sudo systemctl restart systemd-resolved
+
+echo "✅ DNS configurado correctamente para AdGuard Home."
+
+
+# =====================
 #  WireGuard
 # =====================
 echo "Configurando WireGuard..."
