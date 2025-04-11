@@ -12,9 +12,9 @@ fi
 if ! command -v docker &> /dev/null; then
   echo "❌ Docker no está instalado. Instalándolo..."
   curl -sSL https://get.docker.com | sh
-  sudo systemctl enable docker
-  sudo usermod -aG docker $USER
-  sudo systemctl start docker
+  systemctl enable docker
+  usermod -aG docker $USER
+  systemctl start docker
 fi
 
 # Verificar si docker-compose está instalado
@@ -25,17 +25,21 @@ fi
 
 # Instalación Adguard
 
-# 1. Crear carpetas necesarias
+# Verificar si el contenedor adguard-home ya existe
+if docker ps -a --format '{{.Names}}' | grep -q "^adguard-home$"; then
+  echo "✅ El contenedor 'adguard-home' ya existe. Saltando la creación."
+  exit 0
+fi
 
-mkdir ./adguard
-cd ./adguard
-mkdir config && mkdir workingdir || exit
+# Instalación Adguard
+
+# 1. Crear carpetas necesarias
+mkdir -p ./adguard/config ./adguard/workingdir
+cd ./adguard || exit 1
 
 # 2. Crear docker-compose.yml
 echo "Creando docker-compose.yml para adguard..."
 cat <<EOF > docker-compose.yml
-
-
 services:
     adguardhome:
         container_name: adguard-home
@@ -51,6 +55,6 @@ EOF
 
 # 3. Ejecutar docker-compose ya con la config lista
 echo "Levantando el contenedor con la configuración final..."
-sudo docker-compose up -d
+docker-compose up -d
 
-echo "✅ ¡Adguard está listo! Accede a la interfaz web"
+echo "✅ ¡Adguard está listo! Accede a la interfaz web en http://localhost:3000"
