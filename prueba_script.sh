@@ -94,10 +94,18 @@ done
 
 # Habilitar reenvío de IP
 echo "🛠️ Habilitando el reenvío de IP..."
-if ! grep -q "net.ipv4.ip_forward = 1" /etc/sysctl.conf; then
+
+if grep -q "^net.ipv4.ip_forward" /etc/sysctl.conf; then
+  # Si la línea existe, la reemplazamos por la correcta
+  sed -i 's/^net\.ipv4\.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf
+else
+  # Si no existe, la agregamos al final
   echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
 fi
+
+# Aplicar cambios
 sysctl -p
+
 
 # Activar WireGuard
 echo "🚀 Iniciando WireGuard..."
@@ -111,3 +119,5 @@ echo "📡 Estado de la interfaz WireGuard:"
 wg show
 
 echo "✅ WireGuard instalado y configurado correctamente."
+
+reboot
