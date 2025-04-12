@@ -118,9 +118,15 @@ if [ ! -f "$SERVER_CONF" ]; then
 fi
 
 
- # Función para agregar un peer
+# Función para agregar un peer
 add_peer() {
   read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
+
+  # Verificar si las claves del servidor existen
+  if [ ! -f /etc/wireguard/server_privatekey ] || [ ! -f /etc/wireguard/server_publickey ]; then
+    echo "❌ Las claves del servidor no existen. Generando las claves del servidor..."
+    wg genkey | tee /etc/wireguard/server_privatekey | wg pubkey > /etc/wireguard/server_publickey
+  fi
 
   # Generar claves para el cliente
   echo "Generando claves para el cliente '$PEER_NAME'..."
@@ -154,18 +160,33 @@ PersistentKeepalive = 25
 EOF
 
   # Añadir peer al servidor
+  SERVER_CONF="/etc/wireguard/wg0.conf"
+  if [ ! -f "$SERVER_CONF" ]; then
+    echo "❌ El archivo de configuración del servidor no existe. Creando '$SERVER_CONF'..."
+    cat <<EOF > $SERVER_CONF
+[Interface]
+PrivateKey = $(cat /etc/wireguard/server_privatekey)
+Address = 10.6.0.1/24
+ListenPort = 51820
+PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o $(ip route | grep default | awk '{print $5}') -j MASQUERADE
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $(ip route | grep default | awk '{print $5}') -j MASQUERADE
+EOF
+  fi
+
+  # Añadir peer al archivo de configuración
   echo -e "\n[Peer]" >> $SERVER_CONF
   echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
   echo "PublicKey = $(cat /etc/wireguard/${PEER_NAME}_publickey)" >> $SERVER_CONF
   echo "AllowedIPs = ${PEER_IP}/32" >> $SERVER_CONF
 
-  # Código QR
+  # Generar código QR
   qrencode -t png -o /etc/wireguard/${PEER_NAME}_qr.png < $CLIENT_CONFIG_PATH
   echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_qr.png"
   qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
 
   echo "✅ Peer '$PEER_NAME' agregado con IP ${PEER_IP}"
 }
+
 
 while true; do
   add_peer
