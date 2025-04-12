@@ -73,11 +73,7 @@ echo "Configurando DNS para AdGuard Home..."
 mkdir -p /etc/systemd/resolved.conf.d
 
 # Crear el archivo de configuración para desactivar DNSStubListener y establecer DNS a 127.0.0.1
-cat <<EOF > /etc/systemd/resolved.conf.d/adguardhome.conf
- [Resolve]
- DNS=127.0.0.1
- DNSStubListener=no
- EOF
+echo -e "[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no" | sudo tee /etc/systemd/resolved.conf.d/adguardhome.conf
 
 # Respaldar el archivo resolv.conf existente
 mv /etc/resolv.conf /etc/resolv.conf.backup
@@ -108,13 +104,13 @@ DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}')
 SERVER_CONF="/etc/wireguard/wg0.conf"
 if [ ! -f "$SERVER_CONF" ]; then
   cat <<EOF > $SERVER_CONF
-  [Interface]
-  PrivateKey = $(cat /etc/wireguard/server_privatekey)
-  Address = 10.6.0.1/24
-  ListenPort = 51820
-  PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
-  PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
-  EOF
+[Interface]
+PrivateKey = $(cat /etc/wireguard/server_privatekey)
+Address = 10.6.0.1/24
+ListenPort = 51820
+PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o $>
+PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o>
+EOF
 fi
 
 
