@@ -107,7 +107,7 @@ DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}')
 
 SERVER_CONF="/etc/wireguard/wg0.conf"
 if [ ! -f "$SERVER_CONF" ]; then
-  cat <<EOF > $SERVER_CONF
+cat <<EOF > $SERVER_CONF
 [Interface]
 PrivateKey = $(cat /etc/wireguard/server_privatekey)
 Address = 10.6.0.1/24
