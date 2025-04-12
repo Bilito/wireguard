@@ -182,3 +182,4 @@ mostrar_resumen
 
 echo "\n✅ Instalación completada. Recuerda compartir los archivos y QR con los dispositivos clientes."
 reboot
+
