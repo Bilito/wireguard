@@ -108,13 +108,13 @@ DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}')
 SERVER_CONF="/etc/wireguard/wg0.conf"
 if [ ! -f "$SERVER_CONF" ]; then
   cat <<EOF > $SERVER_CONF
-[Interface]
-PrivateKey = $(cat /etc/wireguard/server_privatekey)
-Address = 10.6.0.1/24
-ListenPort = 51820
-PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
-PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
-EOF
+  [Interface]
+  PrivateKey = $(cat /etc/wireguard/server_privatekey)
+  Address = 10.6.0.1/24
+  ListenPort = 51820
+  PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
+  PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
+  EOF
 fi
 
 
