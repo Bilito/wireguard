@@ -127,9 +127,17 @@ add_peer() {
   wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
   LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
 
-  PEER_IP="10.6.0.$((PEER_COUNT + 2))"
-  CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}.conf"
+  # Calcular la siguiente IP disponible
+  LAST_IP=$(grep -oP 'AllowedIPs = 10\.6\.0\.\K[0-9]+' "$SERVER_CONF" | sort -n | tail -1)
+  if [ -z "$LAST_IP" ]; then
+    NEXT_IP=2
+  else
+    NEXT_IP=$((LAST_IP + 1))
+  fi
+  PEER_IP="10.6.0.${NEXT_IP}"
 
+  # Crear la configuración del cliente
+  CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}.conf"
   cat <<EOF > $CLIENT_CONFIG_PATH
 [Interface]
 PrivateKey = $(cat /etc/wireguard/${PEER_NAME}_privatekey)
