@@ -73,11 +73,7 @@ echo "Configurando DNS para AdGuard Home..."
 mkdir -p /etc/systemd/resolved.conf.d
 
 # Crear el archivo de configuración para desactivar DNSStubListener y establecer DNS a 127.0.0.1
-cat <<EOF > /etc/systemd/resolved.conf.d/adguardhome.conf
-[Resolve]
-DNS=127.0.0.1
-DNSStubListener=no
-EOF
+echo -e "[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no" | sudo tee /etc/systemd/resolved.conf.d/adguardhome.conf
 
 # Respaldar el archivo resolv.conf existente
 mv /etc/resolv.conf /etc/resolv.conf.backup
@@ -89,6 +85,7 @@ ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
 systemctl restart systemd-resolved
 
 echo "✅ DNS configurado correctamente para AdGuard Home."
+
 
 # =====================
 #  WireGuard
@@ -105,7 +102,8 @@ wg genkey | tee /etc/wireguard/server_privatekey | wg pubkey > /etc/wireguard/se
 DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}')
 
 SERVER_CONF="/etc/wireguard/wg0.conf"
-cat <<EOF > $SERVER_CONF
+if [ ! -f "$SERVER_CONF" ]; then
+  cat <<EOF > $SERVER_CONF
 [Interface]
 PrivateKey = $(cat /etc/wireguard/server_privatekey)
 Address = 10.6.0.1/24
@@ -113,7 +111,10 @@ ListenPort = 51820
 PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 EOF
+fi
 
+
+ Función para agregar un peer
 add_peer() {
   read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
@@ -162,27 +163,29 @@ EOF
   echo "✅ Peer '$PEER_NAME' agregado con IP ${PEER_IP}"
 }
 
-
 while true; do
   add_peer
   read -p "¿Deseas agregar otro peer? (s/n): " ADD_MORE
   [[ "$ADD_MORE" =~ ^[sS]$ ]] || break
 done
 
+
 # =====================
 #  Reenvío IP y activación
 # =====================
-echo "🛠️ Habilitando el reenvío de IP..."
-grep -q "^net.ipv4.ip_forward" /etc/sysctl.conf && \
-  sed -i 's/^net\.ipv4\.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf || \
-  echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
-sysctl -p
+habilitar_reenvio_ip() {
+  echo "🛠️ Habilitando reenvío IP..."
+  grep -q "^net.ipv4.ip_forward" /etc/sysctl.conf && \
+    sed -i 's/^net\.ipv4\.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf || \
+    echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+  sysctl -p
 
-wg-quick up wg0
-systemctl enable wg-quick@wg0
+  wg-quick up wg0
+  systemctl enable wg-quick@wg0
+  echo "✅ WireGuard activado. Estado:"
+  wg show
+}
 
-echo "Estado de la interfaz WireGuard:"
-wg show
 
 echo "✅ WireGuard instalado y configurado correctamente."
 echo "Recuerda compartir las configuraciones y códigos QR con los dispositivos clientes."
