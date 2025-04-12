@@ -1,9 +1,11 @@
 #!/bin/bash
 
+
 # =====================
-#  Introducir DDNS
+#  Introduce DDNS
 # =====================
-PEER_NAME=read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " 
+read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
+
 # =====================
 #  Verificación root
 # =====================
@@ -77,7 +79,11 @@ echo "Configurando DNS para AdGuard Home..."
 mkdir -p /etc/systemd/resolved.conf.d
 
 # Crear el archivo de configuración para desactivar DNSStubListener y establecer DNS a 127.0.0.1
-echo -e "[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no" | sudo tee /etc/systemd/resolved.conf.d/adguardhome.conf
+cat <<EOF > /etc/systemd/resolved.conf.d/adguardhome.conf
+ [Resolve]
+ DNS=127.0.0.1
+ DNSStubListener=no
+ EOF
 
 # Respaldar el archivo resolv.conf existente
 mv /etc/resolv.conf /etc/resolv.conf.backup
@@ -95,7 +101,7 @@ echo "✅ DNS configurado correctamente para AdGuard Home."
 #  WireGuard
 # =====================
 echo "Configurando WireGuard..."
-read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
+
 
 apt install -y wireguard qrencode
 modprobe wireguard
@@ -120,7 +126,7 @@ fi
 
  # Función para agregar un peer
 add_peer() {
-  
+  read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
   # Generar claves para el cliente
   echo "Generando claves para el cliente '$PEER_NAME'..."
