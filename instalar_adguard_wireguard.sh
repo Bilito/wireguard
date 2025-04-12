@@ -73,7 +73,11 @@ echo "Configurando DNS para AdGuard Home..."
 mkdir -p /etc/systemd/resolved.conf.d
 
 # Crear el archivo de configuración para desactivar DNSStubListener y establecer DNS a 127.0.0.1
-echo -e "[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no" | sudo tee /etc/systemd/resolved.conf.d/adguardhome.conf
+cat <<EOF > /etc/systemd/resolved.conf.d/adguardhome.conf
+ [Resolve]
+ DNS=127.0.0.1
+ DNSStubListener=no
+ EOF
 
 # Respaldar el archivo resolv.conf existente
 mv /etc/resolv.conf /etc/resolv.conf.backup
