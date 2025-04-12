@@ -124,7 +124,7 @@ if [ ! -f "$SERVER_CONF" ]; then
 fi
 
 
- Función para agregar un peer
+# Función para agregar un peer
 add_peer() {
   read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
