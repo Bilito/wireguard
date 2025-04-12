@@ -115,15 +115,26 @@ PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACC
 EOF
 
 add_peer() {
-  PEER_COUNT=$(grep -c "\[Peer\]" $SERVER_CONF)
   read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
+  # Generar claves para el cliente
+  echo "Generando claves para el cliente '$PEER_NAME'..."
   wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
+
+  # Obtener IP local de la interfaz principal
   LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
 
-  PEER_IP="10.6.0.$((PEER_COUNT + 2))"
-  CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}.conf"
+  # Calcular la siguiente IP disponible
+  LAST_IP=$(grep -oP 'AllowedIPs = 10\.6\.0\.\K[0-9]+' "$SERVER_CONF" | sort -n | tail -1)
+  if [ -z "$LAST_IP" ]; then
+    NEXT_IP=2
+  else
+    NEXT_IP=$((LAST_IP + 1))
+  fi
+  PEER_IP="10.6.0.${NEXT_IP}"
 
+  # Crear la configuración del cliente
+  CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}.conf"
   cat <<EOF > $CLIENT_CONFIG_PATH
 [Interface]
 PrivateKey = $(cat /etc/wireguard/${PEER_NAME}_privatekey)
@@ -137,15 +148,20 @@ AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
 
+  # Añadir peer al servidor
   echo -e "\n[Peer]" >> $SERVER_CONF
   echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
   echo "PublicKey = $(cat /etc/wireguard/${PEER_NAME}_publickey)" >> $SERVER_CONF
   echo "AllowedIPs = ${PEER_IP}/32" >> $SERVER_CONF
 
+  # Código QR
   qrencode -t png -o /etc/wireguard/${PEER_NAME}_qr.png < $CLIENT_CONFIG_PATH
   echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_qr.png"
   qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
+
+  echo "✅ Peer '$PEER_NAME' agregado con IP ${PEER_IP}"
 }
+
 
 while true; do
   add_peer
