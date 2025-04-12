@@ -1,18 +1,13 @@
 #!/bin/bash
 
-set -e
-trap 'echo "\n❌ Error en la línea $LINENO. Abortando."' ERR
 
 # =====================
-# Variables globales
+#  Introduciendo el DNS
 # =====================
-ADGUARD_DIR="./adguard"
-WG_CONF_DIR="/etc/wireguard"
-TZ="Europe/Madrid"
-WG_SUBNET="10.6.0"
+read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
 
 # =====================
-# Verificación root
+#  Verificación root
 # =====================
 if [ "$(id -u)" -ne 0 ]; then
   echo "Este script debe ejecutarse con privilegios de root."
@@ -20,45 +15,49 @@ if [ "$(id -u)" -ne 0 ]; then
 fi
 
 # =====================
-# Actualización del sistema
+#  Actualización del sistema
 # =====================
+echo "Actualizando los paquetes del sistema..."
 apt update && apt upgrade -y
 
 # =====================
-# Funciones
+#  Docker
 # =====================
-instalar_docker() {
-  echo "\n🔧 Verificando Docker..."
-  if ! command -v docker &> /dev/null; then
-    echo "Instalando Docker..."
-    curl -sSL https://get.docker.com | sh
-    systemctl enable docker
-    systemctl start docker
-    usermod -aG docker "$SUDO_USER"
-    echo "⚠️ Reinicia la sesión del usuario para usar Docker sin sudo."
-  else
-    echo "✅ Docker ya está instalado."
-  fi
+echo "Verificando Docker..."
+if ! command -v docker &> /dev/null; then
+  echo "❌ Docker no está instalado. Instalándolo..."
+  curl -sSL https://get.docker.com | sh
+  systemctl enable docker
+  systemctl start docker
+  usermod -aG docker "$SUDO_USER"
+  echo "⚠️ Reinicia la sesión del usuario para usar Docker sin sudo."
+fi
 
-  echo "Verificando docker-compose..."
-  if ! command -v docker-compose &> /dev/null; then
-    apt install -y docker-compose
-  fi
-}
+# =====================
+#  Docker Compose
+# =====================
+echo "Verificando docker-compose..."
+if ! command -v docker-compose &> /dev/null; then
+  echo "❌ docker-compose no está instalado. Instalándolo..."
+  apt install -y docker-compose || { echo "Error al instalar docker-compose"; exit 1; }
+fi
 
-instalar_adguard() {
-  echo "\n📦 Instalando AdGuard Home..."
-  if docker ps -a --format '{{.Names}}' | grep -q "^adguard-home$"; then
-    echo "✅ Contenedor 'adguard-home' ya existe."
-  else
-    mkdir -p "$ADGUARD_DIR/config" "$ADGUARD_DIR/workingdir"
-    pushd "$ADGUARD_DIR"
-    cat <<EOF > docker-compose.yml
+# =====================
+#  AdGuard Home
+# =====================
+echo "Configurando AdGuard Home..."
+if docker ps -a --format '{{.Names}}' | grep -q "^adguard-home$"; then
+  echo "✅ El contenedor 'adguard-home' ya existe. Saltando la creación."
+else
+  mkdir -p ./adguard/config ./adguard/workingdir
+  cd ./adguard || exit 1
+  echo "Creando docker-compose.yml para AdGuard..."
+  cat <<EOF > docker-compose.yml
 services:
   adguardhome:
     container_name: adguard-home
     environment:
-      - TZ=$TZ
+      - TZ=Europe/Madrid
     volumes:
       - ./config:/opt/adguardhome/conf
       - ./workingdir:/opt/adguardhome/work
@@ -66,129 +65,137 @@ services:
     network_mode: host
     image: adguard/adguardhome
 EOF
-    docker-compose up -d
-    popd
-    echo "✅ AdGuard está listo en http://localhost:3000"
-  fi
-}
+  docker-compose up -d
+  cd ..
+  echo "✅ ¡AdGuard está listo! Accede a la interfaz web en http://localhost:3000"
+fi
 
-configurar_dns_adguard() {
-  echo "\n🧩 Configurando DNS para AdGuard Home..."
-  mkdir -p /etc/systemd/resolved.conf.d
-  echo -e "[Resolve]\nDNS=127.0.0.1\nDNSStubListener=no" > /etc/systemd/resolved.conf.d/adguardhome.conf
+# =====================
+# Configuración de DNS para AdGuard Home
+# =====================
+echo "Configurando DNS para AdGuard Home..."
 
-  mv /etc/resolv.conf /etc/resolv.conf.backup || true
-  ln -sf /run/systemd/resolve/resolv.conf /etc/resolv.conf
-  systemctl restart systemd-resolved
-  echo "✅ DNS configurado para AdGuard."
-}
+# Crear el directorio si no existe
+mkdir -p /etc/systemd/resolved.conf.d
 
-instalar_wireguard() {
-  echo "\n🔐 Instalando y configurando WireGuard..."
-  read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
+# Crear el archivo de configuración para desactivar DNSStubListener y establecer DNS a 127.0.0.1
+cat <<EOF > /etc/systemd/resolved.conf.d/adguardhome.conf
+ [Resolve]
+ DNS=127.0.0.1
+ DNSStubListener=no
+ EOF
 
-  apt install -y wireguard qrencode
-  modprobe wireguard
+# Respaldar el archivo resolv.conf existente
+mv /etc/resolv.conf /etc/resolv.conf.backup
 
-  mkdir -p "$WG_CONF_DIR"
-  wg genkey | tee "$WG_CONF_DIR/server_privatekey" | wg pubkey > "$WG_CONF_DIR/server_publickey"
-  DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}')
+# Crear un enlace simbólico para que systemd use el resolv.conf adecuado
+ln -s /run/systemd/resolve/resolv.conf /etc/resolv.conf
 
-  SERVER_CONF="$WG_CONF_DIR/wg0.conf"
-  cat <<EOF > "$SERVER_CONF"
+# Reiniciar el servicio de systemd-resolved para aplicar los cambios
+systemctl restart systemd-resolved
+
+echo "✅ DNS configurado correctamente para AdGuard Home."
+
+
+# =====================
+#  WireGuard
+# =====================
+echo "Configurando WireGuard..."
+
+
+apt install -y wireguard qrencode
+modprobe wireguard
+
+mkdir -p /etc/wireguard
+
+wg genkey | tee /etc/wireguard/server_privatekey | wg pubkey > /etc/wireguard/server_publickey
+DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}')
+
+SERVER_CONF="/etc/wireguard/wg0.conf"
+if [ ! -f "$SERVER_CONF" ]; then
+  cat <<EOF > $SERVER_CONF
 [Interface]
-PrivateKey = $(cat "$WG_CONF_DIR/server_privatekey")
-Address = ${WG_SUBNET}.1/24
+PrivateKey = $(cat /etc/wireguard/server_privatekey)
+Address = 10.6.0.1/24
 ListenPort = 51820
 PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEPT; iptables -t nat -A POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 EOF
+fi
 
-  systemctl enable wg-quick@wg0
-}
 
-obtener_ip_disponible() {
-  for i in {2..254}; do
-    if ! grep -q "${WG_SUBNET}.${i}" "$WG_CONF_DIR/wg0.conf"; then
-      echo "${WG_SUBNET}.${i}"
-      return
-    fi
-  done
-  echo "❌ No hay IPs disponibles en el rango."
-  exit 1
-}
+ Función para agregar un peer
+add_peer() {
+  read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
-agregar_peer() {
-  read -p "Introduce el nombre del peer (ej. Cliente1): " PEER_NAME
+  # Generar claves para el cliente
+  echo "Generando claves para el cliente '$PEER_NAME'..."
+  wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
 
-  wg genkey | tee "$WG_CONF_DIR/${PEER_NAME}_privatekey" | wg pubkey > "$WG_CONF_DIR/${PEER_NAME}_publickey"
+  # Obtener IP local de la interfaz principal
   LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
 
-  PEER_IP=$(obtener_ip_disponible)
-  CLIENT_CONFIG_PATH="$WG_CONF_DIR/${PEER_NAME}.conf"
+  # Calcular la siguiente IP disponible
+  LAST_IP=$(grep -oP 'AllowedIPs = 10\.6\.0\.\K[0-9]+' "$SERVER_CONF" | sort -n | tail -1)
+  if [ -z "$LAST_IP" ]; then
+    NEXT_IP=2
+  else
+    NEXT_IP=$((LAST_IP + 1))
+  fi
+  PEER_IP="10.6.0.${NEXT_IP}"
 
-  cat <<EOF > "$CLIENT_CONFIG_PATH"
+  # Crear la configuración del cliente
+  CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}.conf"
+  cat <<EOF > $CLIENT_CONFIG_PATH
 [Interface]
-PrivateKey = $(cat "$WG_CONF_DIR/${PEER_NAME}_privatekey")
+PrivateKey = $(cat /etc/wireguard/${PEER_NAME}_privatekey)
 Address = ${PEER_IP}/32
 DNS = $LOCAL_IP
 
 [Peer]
-PublicKey = $(cat "$WG_CONF_DIR/server_publickey")
+PublicKey = $(cat /etc/wireguard/server_publickey)
 Endpoint = $ENDPOINT:51820
 AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
 
-  cat <<EOF >> "$WG_CONF_DIR/wg0.conf"
+  # Añadir peer al servidor
+  echo -e "\n[Peer]" >> $SERVER_CONF
+  echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
+  echo "PublicKey = $(cat /etc/wireguard/${PEER_NAME}_publickey)" >> $SERVER_CONF
+  echo "AllowedIPs = ${PEER_IP}/32" >> $SERVER_CONF
 
-[Peer]
-# Nombre del Peer: $PEER_NAME
-PublicKey = $(cat "$WG_CONF_DIR/${PEER_NAME}_publickey")
-AllowedIPs = ${PEER_IP}/32
-EOF
+  # Código QR
+  qrencode -t png -o /etc/wireguard/${PEER_NAME}_qr.png < $CLIENT_CONFIG_PATH
+  echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_qr.png"
+  qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
 
-  qrencode -t png -o "$WG_CONF_DIR/${PEER_NAME}_qr.png" < "$CLIENT_CONFIG_PATH"
-  qrencode -t ansiutf8 < "$CLIENT_CONFIG_PATH"
-
-  echo "🎉 Peer $PEER_NAME agregado con éxito con IP $PEER_IP."
+  echo "✅ Peer '$PEER_NAME' agregado con IP ${PEER_IP}"
 }
-
-configurar_reenvio_ip() {
-  echo "\n🛠️ Activando reenvío de IP..."
-  grep -q "^net.ipv4.ip_forward" /etc/sysctl.conf && \
-    sed -i 's/^net\.ipv4\.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf || \
-    echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
-  sysctl -p
-}
-
-mostrar_resumen() {
-  echo "\n📋 Resumen de configuraciones creadas:"
-  echo "Archivos .conf:"
-  ls "$WG_CONF_DIR"/*.conf
-  echo "\nCódigos QR generados:"
-  ls "$WG_CONF_DIR"/*_qr.png
-}
-
-# =====================
-# Main
-# =====================
-instalar_docker
-instalar_adguard
-configurar_dns_adguard
-
-instalar_wireguard
 
 while true; do
-  agregar_peer
+  add_peer
   read -p "¿Deseas agregar otro peer? (s/n): " ADD_MORE
   [[ "$ADD_MORE" =~ ^[sS]$ ]] || break
 done
 
-configurar_reenvio_ip
-wg-quick up wg0
 
-mostrar_resumen
+# =====================
+#  Reenvío IP y activación
+# =====================
+habilitar_reenvio_ip() {
+  echo "🛠️ Habilitando reenvío IP..."
+  grep -q "^net.ipv4.ip_forward" /etc/sysctl.conf && \
+    sed -i 's/^net\.ipv4\.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf || \
+    echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+  sysctl -p
 
-echo "\n✅ Instalación completada. Recuerda compartir los archivos y QR con los dispositivos clientes."
-reboot
+  wg-quick up wg0
+  systemctl enable wg-quick@wg0
+  echo "✅ WireGuard activado. Estado:"
+  wg show
+}
+
+
+echo "✅ WireGuard instalado y configurado correctamente."
+echo "Recuerda compartir las configuraciones y códigos QR con los dispositivos clientes."
