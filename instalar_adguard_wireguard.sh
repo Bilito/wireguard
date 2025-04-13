@@ -121,6 +121,7 @@ EOF
 
 # Función para agregar un peer
 add_peer() {
+  SERVER_CONF="/etc/wireguard/wg0.conf"
   PEER_COUNT=$(grep -c "\[Peer\]" $SERVER_CONF)
   read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
