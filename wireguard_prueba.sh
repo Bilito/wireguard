@@ -1,12 +1,42 @@
+#!/bin/bash
+
+WG_DIR="/etc/wireguard"
+WG_CONF="$WG_DIR/wg0.conf"
+WG_INTERFACE="wg0"
+SUBNET="10.0.0"  # Puedes cambiar esto
+SERVER_PORT=51820
+AUTO_MODE=false  # Modo automático desactivado por defecto
+DDNS=""  # Variable para DDNS
+
+# Comprobamos si estan instalados qr encode y zip
+check_dependencies() {
+    if ! command -v qrencode &> /dev/null; then
+        echo "[*] qrencode no está instalado. Instalándolo..."
+        sudo apt update && sudo apt install -y qrencode
+    fi
+
+    if ! command -v zip &> /dev/null; then
+        echo "[*] zip no está instalado. Instalándolo..."
+        sudo apt update && sudo apt install -y zip
+    fi
+
+    if ! command -v wg &> /dev/null; then
+        echo "[*] WireGuard no está instalado. Instalándolo..."
+        sudo apt update && sudo apt install -y wireguard
+    fi
+
+    # Cargar el módulo wireguard
+    if ! lsmod | grep wireguard &> /dev/null; then
+        echo "[*] Cargando el módulo wireguard..."
+        sudo modprobe wireguard
+    fi
+}
+
+
 # =====================
 #  WireGuard
 # =====================
 echo "Configurando WireGuard..."
-read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
-
-# Instalación y configuración
-apt install -y wireguard qrencode
-modprobe wireguard
 
 mkdir -p /etc/wireguard
 
