@@ -6,6 +6,7 @@ WG_INTERFACE="wg0"
 SUBNET="10.0.0"  # Puedes cambiar esto
 SERVER_PORT=51820
 AUTO_MODE=false  # Modo automático desactivado por defecto
+DDNS=""  # Variable para DDNS
 
 # Comprobamos si estan instalados qr encode y zip
 check_dependencies() {
@@ -18,7 +19,28 @@ check_dependencies() {
         echo "[*] zip no está instalado. Instalándolo..."
         sudo apt update && sudo apt install -y zip
     fi
+
+    if ! command -v wg &> /dev/null; then
+        echo "[*] WireGuard no está instalado. Instalándolo..."
+        sudo apt update && sudo apt install -y wireguard
+    fi
+
+    # Cargar el módulo wireguard
+    if ! lsmod | grep wireguard &> /dev/null; then
+        echo "[*] Cargando el módulo wireguard..."
+        sudo modprobe wireguard
+    fi
 }
+
+# wireguard
+echo "Configurando WireGuard..."
+read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
+
+# Instalación y configuración
+apt install -y wireguard
+modprobe wireguard
+
+mkdir -p /etc/wireguard
 
 # obtenemos la interfaz de red que se esta usando
 get_main_interface() {
@@ -33,10 +55,18 @@ get_local_ip() {
 # generamos las claves
 generate_keys() {
     umask 077
-    wg genkey | tee "$1" | wg pubkey > "$2"
+    wg genkey | tee /etc/wireguard/"$1" | wg pubkey > /etc/wireguard/"$2"
+}
+
+# metodo para preguntar por el DDNS
+ask_ddns() {
+    if [ -z "$DDNS" ]; then
+        read -rp "Introduce tu dominio DDNS o IP pública (ej. midominio.ddns.net): " DDNS
+    fi
 }
 
 # iniciamos el servidor
+ask_ddns
 init_server() {
     echo "[*] Inicializando servidor WireGuard..."
 
@@ -71,6 +101,7 @@ EOF
 
 add_peer() {
     check_dependencies
+    ask_ddns
     echo "[*] Añadiendo nuevo peer..."
 
     cd "$WG_DIR" || exit 1
@@ -111,7 +142,7 @@ DNS = $LOCAL_IP
 
 [Peer]
 PublicKey = $SERVER_PUB_KEY
-Endpoint = $LOCAL_IP:$SERVER_PORT
+Endpoint = $DDNS:$SERVER_PORT
 AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
