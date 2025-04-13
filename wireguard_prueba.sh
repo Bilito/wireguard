@@ -98,7 +98,7 @@ add_peer() {
     wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
     LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
 
-    # Calcular la siguiente IP disponible
+    # Obtener la última IP utilizada para los peers
     LAST_IP=$(grep -oP 'AllowedIPs = 10\.6\.0\.\K[0-9]+' "$SERVER_CONF" | sort -n | tail -1)
     if [ -z "$LAST_IP" ]; then
         NEXT_IP=2
