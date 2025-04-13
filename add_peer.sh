@@ -37,6 +37,8 @@ AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
 
+SERVER_CONF="/etc/wireguard/wg0.conf"
+
     # Agregar el nuevo Peer al servidor
     echo "[Peer]" >> $SERVER_CONF
     echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
