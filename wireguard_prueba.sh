@@ -4,7 +4,7 @@
 #  WireGuard
 # =====================
 echo "Configurando WireGuard..."
-read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
+
 
 # Instalación y configuración
 apt install -y wireguard qrencode
