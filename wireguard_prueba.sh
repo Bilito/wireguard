@@ -23,7 +23,7 @@ PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEP
 PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 EOF
 
-# Agregar un peer
+# Agregar el primer peer
 
   PEER_COUNT=$(grep -c "\[Peer\]" $SERVER_CONF)
   read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
