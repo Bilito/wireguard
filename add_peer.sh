@@ -14,6 +14,7 @@ add_peer() {
     LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
 
     # Obtener la última IP utilizada para los peers
+    SERVER_CONF="/etc/wireguard/wg0.conf"
     LAST_IP=$(grep -oP 'AllowedIPs = 10\.6\.0\.\K[0-9]+' "$SERVER_CONF" | sort -n | tail -1)
     if [ -z "$LAST_IP" ]; then
         NEXT_IP=2
@@ -37,7 +38,7 @@ AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
 
-SERVER_CONF="/etc/wireguard/wg0.conf"
+
 
     # Agregar el nuevo Peer al servidor
     echo "[Peer]" >> $SERVER_CONF
