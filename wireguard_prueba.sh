@@ -20,16 +20,7 @@ check_dependencies() {
         sudo apt update && sudo apt install -y zip
     fi
 
-    if ! command -v wg &> /dev/null; then
-        echo "[*] WireGuard no está instalado. Instalándolo..."
-        sudo apt update && sudo apt install -y wireguard
-    fi
-
-    # Cargar el módulo wireguard
-    if ! lsmod | grep wireguard &> /dev/null; then
-        echo "[*] Cargando el módulo wireguard..."
-        sudo modprobe wireguard
-    fi
+   
 }
 
 
@@ -37,6 +28,10 @@ check_dependencies() {
 #  WireGuard
 # =====================
 echo "Configurando WireGuard..."
+
+# Instalación y configuración
+apt install -y wireguard qrencode
+modprobe wireguard
 
 mkdir -p /etc/wireguard
 
