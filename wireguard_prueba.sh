@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # =====================
 #  WireGuard
 # =====================
@@ -23,26 +25,27 @@ PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEP
 PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 EOF
 
-# Agregar el primer peer
+# =====================
+#  Agregar el primer Peer
+# =====================
+PEER_COUNT=$(grep -c "\[Peer\]" $SERVER_CONF)
+read -p "Introduce el nombre del primer peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
-  PEER_COUNT=$(grep -c "\[Peer\]" $SERVER_CONF)
-  read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
+wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
+LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
 
-  wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
-  LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
-
-  # Calcular la siguiente IP disponible
-  LAST_IP=$(grep -oP 'AllowedIPs = 10\.6\.0\.\K[0-9]+' "$SERVER_CONF" | sort -n | tail -1)
-  if [ -z "$LAST_IP" ]; then
+# Calcular la siguiente IP disponible
+LAST_IP=$(grep -oP 'AllowedIPs = 10\.6\.0\.\K[0-9]+' "$SERVER_CONF" | sort -n | tail -1)
+if [ -z "$LAST_IP" ]; then
     NEXT_IP=2
-  else
+else
     NEXT_IP=$((LAST_IP + 1))
-  fi
-  PEER_IP="10.6.0.${NEXT_IP}"
+fi
+PEER_IP="10.6.0.${NEXT_IP}"
 
-  # Crear la configuración del cliente
-  CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}.conf"
-  cat <<EOF > $CLIENT_CONFIG_PATH
+# Crear la configuración del cliente
+CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}.conf"
+cat <<EOF > $CLIENT_CONFIG_PATH
 [Interface]
 PrivateKey = $(cat /etc/wireguard/${PEER_NAME}_privatekey)
 Address = ${PEER_IP}/32
@@ -55,16 +58,14 @@ AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
 
-  echo "\n[Peer]" >> $SERVER_CONF
-  echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
-  echo "PublicKey = $(cat /etc/wireguard/${PEER_NAME}_publickey)" >> $SERVER_CONF
-  echo "AllowedIPs = ${PEER_IP}/32" >> $SERVER_CONF
+echo "\n[Peer]" >> $SERVER_CONF
+echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
+echo "PublicKey = $(cat /etc/wireguard/${PEER_NAME}_publickey)" >> $SERVER_CONF
+echo "AllowedIPs = ${PEER_IP}/32" >> $SERVER_CONF
 
-  qrencode -t png -o /etc/wireguard/${PEER_NAME}_qr.png < $CLIENT_CONFIG_PATH
-  echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_qr.png"
-  qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
-
-
+qrencode -t png -o /etc/wireguard/${PEER_NAME}_qr.png < $CLIENT_CONFIG_PATH
+echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_qr.png"
+qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
 
 # =====================
 #  Reenvío IP y activación
@@ -87,12 +88,66 @@ wg show
 echo "✅ WireGuard instalado y configurado correctamente."
 echo "Recuerda compartir las configuraciones y códigos QR con los dispositivos clientes."
 
-read -p "¿Deseas reiniciar el servidor ahora? (s/n): " respuesta
+# =====================
+#  Función para añadir más peers
+# =====================
+add_peer() {
+    read -p "Introduce el nombre del nuevo peer: " PEER_NAME
 
+    wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
+    LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
+
+    # Calcular la siguiente IP disponible
+    LAST_IP=$(grep -oP 'AllowedIPs = 10\.6\.0\.\K[0-9]+' "$SERVER_CONF" | sort -n | tail -1)
+    if [ -z "$LAST_IP" ]; then
+        NEXT_IP=2
+    else
+        NEXT_IP=$((LAST_IP + 1))
+    fi
+    PEER_IP="10.6.0.${NEXT_IP}"
+
+    # Crear la configuración del cliente
+    CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}.conf"
+    cat <<EOF > $CLIENT_CONFIG_PATH
+[Interface]
+PrivateKey = $(cat /etc/wireguard/${PEER_NAME}_privatekey)
+Address = ${PEER_IP}/32
+DNS = $LOCAL_IP
+
+[Peer]
+PublicKey = $(cat /etc/wireguard/server_publickey)
+Endpoint = $ENDPOINT:51820
+AllowedIPs = 0.0.0.0/0
+PersistentKeepalive = 25
+EOF
+
+    echo "\n[Peer]" >> $SERVER_CONF
+    echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
+    echo "PublicKey = $(cat /etc/wireguard/${PEER_NAME}_publickey)" >> $SERVER_CONF
+    echo "AllowedIPs = ${PEER_IP}/32" >> $SERVER_CONF
+
+    qrencode -t png -o /etc/wireguard/${PEER_NAME}_qr.png < $CLIENT_CONFIG_PATH
+    echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_qr.png"
+    qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
+}
+
+# Preguntar si desea añadir más peers
+while true; do
+    read -p "¿Deseas agregar otro peer? (s/n): " respuesta
+    if [ "$respuesta" = "s" ] || [ "$respuesta" = "S" ]; then
+        add_peer
+    else
+        break
+    fi
+done
+
+# =====================
+#  Reiniciar el servidor
+# =====================
+read -p "¿Deseas reiniciar el servidor ahora? (s/n): " respuesta
 if [ "$respuesta" = "s" ] || [ "$respuesta" = "S" ]; then
     echo "Reiniciando el servidor..."
     reboot
 else
     echo "Reinicio cancelado."
 fi
-
