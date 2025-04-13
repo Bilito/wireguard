@@ -1,21 +1,3 @@
-#!/bin/bash
-
-# Comprobamos si estan instalados qr encode y zip
-check_dependencies() {
-    if ! command -v qrencode &> /dev/null; then
-        echo "[*] qrencode no está instalado. Instalándolo..."
-        sudo apt update && sudo apt install -y qrencode
-    fi
-
-    if ! command -v zip &> /dev/null; then
-        echo "[*] zip no está instalado. Instalándolo..."
-        sudo apt update && sudo apt install -y zip
-    fi
-
-   
-}
-
-
 # =====================
 #  WireGuard
 # =====================
