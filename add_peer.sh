@@ -8,7 +8,7 @@ cd /etc/wireguard/
 
 add_peer() {
     read -p "Introduce el dominio DDNS o IP pública para el endpoint del servidor (ej. midominio.ddns.net): " ENDPOINT
-    read -p "Introduce el nombre del nuevo peer: " PEER_NAME
+    read -p "Introduce el nombre del peer: " PEER_NAME
 
     wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
     LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
