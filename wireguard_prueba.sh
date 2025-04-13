@@ -68,7 +68,11 @@ EOF
 while true; do
   add_peer
   read -p "¿Deseas agregar otro peer? (s/n): " ADD_MORE
-  [[ "$ADD_MORE" =~ ^[sS]$ ]] || break
+  if [ "$ADD_MORE" = "s" ] || [ "$ADD_MORE" = "S" ]; then
+    add_peer
+else
+    break
+fi
 done
 
 # =====================
@@ -94,9 +98,11 @@ echo "Recuerda compartir las configuraciones y códigos QR con los dispositivos 
 
 read -p "¿Deseas reiniciar el servidor ahora? (s/n): " respuesta
 
-if [[ "$respuesta" == "s" || "$respuesta" == "S" ]]; then
+read -p "¿Deseas reiniciar el servidor ahora? (s/n): " respuesta
+
+if [ "$respuesta" = "s" ] || [ "$respuesta" = "S" ]; then
     echo "Reiniciando el servidor..."
-    sudo reboot
+    reboot
 else
     echo "Reinicio cancelado."
 fi
