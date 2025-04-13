@@ -194,6 +194,24 @@ maybe_restart_server() {
     fi
 }
 
+# =====================
+#  Reenvío IP y activación
+# =====================
+echo "🛠️ Habilitando el reenvío de IP..."
+if ! grep -q "^net.ipv4.ip_forward" /etc/sysctl.conf; then
+  echo "net.ipv4.ip_forward = 1" >> /etc/sysctl.conf
+else
+  sed -i 's/^net\.ipv4\.ip_forward.*/net.ipv4.ip_forward = 1/' /etc/sysctl.conf
+fi
+sysctl -p
+
+# Activar WireGuard
+wg-quick up wg0
+systemctl enable wg-quick@wg0
+
+echo "Estado de la interfaz WireGuard:"
+wg show
+
 # Main
 case "$1" in
     init)
