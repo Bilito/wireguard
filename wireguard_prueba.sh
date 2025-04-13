@@ -91,3 +91,13 @@ wg show
 
 echo "✅ WireGuard instalado y configurado correctamente."
 echo "Recuerda compartir las configuraciones y códigos QR con los dispositivos clientes."
+
+read -p "¿Deseas reiniciar el servidor ahora? (s/n): " respuesta
+
+if [[ "$respuesta" == "s" || "$respuesta" == "S" ]]; then
+    echo "Reiniciando el servidor..."
+    sudo reboot
+else
+    echo "Reinicio cancelado."
+fi
+
