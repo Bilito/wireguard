@@ -65,15 +65,6 @@ EOF
   qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
 }
 
-while true; do
-  add_peer
-  read -p "¿Deseas agregar otro peer? (s/n): " ADD_MORE
-  if [ "$ADD_MORE" = "s" ] || [ "$ADD_MORE" = "S" ]; then
-    add_peer
-else
-    break
-fi
-done
 
 # =====================
 #  Reenvío IP y activación
@@ -95,8 +86,6 @@ wg show
 
 echo "✅ WireGuard instalado y configurado correctamente."
 echo "Recuerda compartir las configuraciones y códigos QR con los dispositivos clientes."
-
-read -p "¿Deseas reiniciar el servidor ahora? (s/n): " respuesta
 
 read -p "¿Deseas reiniciar el servidor ahora? (s/n): " respuesta
 
