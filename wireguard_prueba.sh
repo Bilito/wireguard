@@ -47,7 +47,7 @@ wg show
 echo "✅ WireGuard instalado y configurado correctamente."
 echo "Recuerda compartir las configuraciones y códigos QR con los dispositivos clientes."
 
-exit
-sudo wget https://raw.githubusercontent.com/Bilito/wireguard/refs/heads/main/add_peer.sh
-sudo chmod +x add_peer.sh
-sudo ./add_peer.sh
+
+wget https://raw.githubusercontent.com/Bilito/wireguard/refs/heads/main/add_peer.sh
+chmod +x add_peer.sh
+./add_peer.sh
