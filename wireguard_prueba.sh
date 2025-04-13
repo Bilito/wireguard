@@ -23,8 +23,8 @@ PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEP
 PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 EOF
 
-# Función para agregar un peer
-add_peer() {
+# Agregar un peer
+
   PEER_COUNT=$(grep -c "\[Peer\]" $SERVER_CONF)
   read -p "Introduce el nombre del peer (por ejemplo, 'Cliente1'): " PEER_NAME
 
@@ -63,7 +63,7 @@ EOF
   qrencode -t png -o /etc/wireguard/${PEER_NAME}_qr.png < $CLIENT_CONFIG_PATH
   echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_qr.png"
   qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
-}
+
 
 
 # =====================
