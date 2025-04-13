@@ -60,6 +60,12 @@ while true; do
     fi
 done
 
+wg-quick down wg0
+wg-quick up wg0
+
+echo "Estado de la interfaz WireGuard:"
+wg show
+
 # =====================
 #  Reiniciar el servidor
 # =====================
