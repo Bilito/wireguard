@@ -25,41 +25,6 @@ PostUp = iptables -A FORWARD -i %i -j ACCEPT; iptables -A FORWARD -o %i -j ACCEP
 PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -D FORWARD -o %i -j ACCEPT; iptables -t nat -D POSTROUTING -o $DEFAULT_IFACE -j MASQUERADE
 EOF
 
-# =====================
-#  Agregar el primer Peer
-# =====================
-PEER_COUNT=$(grep -c "\[Peer\]" $SERVER_CONF)
-read -p "Introduce el nombre del primer peer (por ejemplo, 'Cliente1'): " PEER_NAME
-
-wg genkey | tee /etc/wireguard/${PEER_NAME}_privatekey | wg pubkey > /etc/wireguard/${PEER_NAME}_publickey
-LOCAL_IP=$(ip route get 1.1.1.1 | awk '{print $7; exit}')
-
-PEER_IP=10.6.0.2
-
-# Crear la configuración del cliente
-CLIENT_CONFIG_PATH="/etc/wireguard/${PEER_NAME}.conf"
-cat <<EOF > $CLIENT_CONFIG_PATH
-[Interface]
-PrivateKey = $(cat /etc/wireguard/${PEER_NAME}_privatekey)
-Address = ${PEER_IP}/32
-DNS = $LOCAL_IP
-
-[Peer]
-PublicKey = $(cat /etc/wireguard/server_publickey)
-Endpoint = $ENDPOINT:51820
-AllowedIPs = 0.0.0.0/0
-PersistentKeepalive = 25
-EOF
-
-# Agregar el primer Peer al servidor
-echo "[Peer]" >> $SERVER_CONF
-echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
-echo "PublicKey = $(cat /etc/wireguard/${PEER_NAME}_publickey)" >> $SERVER_CONF
-echo "AllowedIPs = ${PEER_IP}/32" >> $SERVER_CONF
-
-qrencode -t png -o /etc/wireguard/${PEER_NAME}_qr.png < $CLIENT_CONFIG_PATH
-echo "Código QR guardado en: /etc/wireguard/${PEER_NAME}_qr.png"
-qrencode -t ansiutf8 < $CLIENT_CONFIG_PATH
 
 # =====================
 #  Reenvío IP y activación
