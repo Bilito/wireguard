@@ -58,7 +58,8 @@ AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
 
-echo "\n[Peer]" >> $SERVER_CONF
+# Agregar el primer Peer al servidor
+echo "[Peer]" >> $SERVER_CONF
 echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
 echo "PublicKey = $(cat /etc/wireguard/${PEER_NAME}_publickey)" >> $SERVER_CONF
 echo "AllowedIPs = ${PEER_IP}/32" >> $SERVER_CONF
@@ -121,7 +122,8 @@ AllowedIPs = 0.0.0.0/0
 PersistentKeepalive = 25
 EOF
 
-    echo "\n[Peer]" >> $SERVER_CONF
+    # Agregar el nuevo Peer al servidor
+    echo "[Peer]" >> $SERVER_CONF
     echo "# Nombre del Peer: $PEER_NAME" >> $SERVER_CONF
     echo "PublicKey = $(cat /etc/wireguard/${PEER_NAME}_publickey)" >> $SERVER_CONF
     echo "AllowedIPs = ${PEER_IP}/32" >> $SERVER_CONF
