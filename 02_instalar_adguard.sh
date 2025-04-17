@@ -94,6 +94,6 @@ systemctl restart systemd-resolved
 echo "✅ DNS configurado correctamente para AdGuard Home."
 
 
-wget https://raw.githubusercontent.com/Bilito/wireguard/refs/heads/main/instalar_wireguard.sh
-chmod +x instalar_wireguard.sh
-./instalar_wireguard.sh
+wget https://raw.githubusercontent.com/Bilito/wireguard/refs/heads/main/03_instalar_wireguard.sh
+chmod +x 03_instalar_wireguard.sh
+./03_instalar_wireguard.sh
