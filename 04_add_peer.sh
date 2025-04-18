@@ -53,7 +53,7 @@ EOF
 
 # Preguntar si desea añadir más peers
 while true; do
-    read -p "¿Deseas agregar otro peer? (s/n): " respuesta
+    read -p "¿Deseas agregar un peer? (s/n): " respuesta
     if [ "$respuesta" = "s" ] || [ "$respuesta" = "S" ]; then
         add_peer
     else
