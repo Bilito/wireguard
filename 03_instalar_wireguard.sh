@@ -13,7 +13,7 @@ modprobe wireguard
 mkdir -p /etc/wireguard
 
 wg genkey | tee /etc/wireguard/server_privatekey | wg pubkey > /etc/wireguard/server_publickey
-DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}')
+DEFAULT_IFACE=$(ip route | grep default | awk '{print $5}' | head -n1)
 
 SERVER_CONF="/etc/wireguard/wg0.conf"
 cat <<EOF > $SERVER_CONF
